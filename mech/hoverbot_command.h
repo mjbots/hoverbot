@@ -129,7 +129,7 @@ struct IsEnum<mjmech::mech::HoverbotCommand::Mode> {
         { M::kFault, "fault" },
         { M::kZeroVelocity, "zero_velocity" },
         { M::kJoint, "joint" },
-        { M::kVelocity, "velocity" },
+        { M::kDrive, "drive" },
       }};
   }
 };

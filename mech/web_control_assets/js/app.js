@@ -28,13 +28,8 @@ const getElement = (v) => document.getElementById(v);
 const iota = (v) => Array.from((new Array(v)).keys());
 
 const PERSIST_ELEMENTS = [
-  "jump_acceleration",
   "max_forward_speed",
   "height_scale",
-  "jump_repeat",
-  "always_step",
-  "disable_strafe",
-  "maximize_flight",
   "record_data",
 ];
 
@@ -279,23 +274,11 @@ class Application {
   }
 
   getMaxForwardSpeed() {
-    if (this._mode == "pronk") {
-      return 0.3;
-    } else {
-      return Number(getElement('max_forward_speed').value);
-    }
+    return Number(getElement('max_forward_speed').value);
   }
 
   getMaxReverseSpeed() {
-    if (this._mode == "pronk") {
-      return -0.1;
-    } else {
-      return -0.5;
-    }
-  }
-
-  getJumpAcceleration() {
-    return Number(getElement('jump_acceleration').value);
+    return -0.5;
   }
 
   start() {
@@ -442,56 +425,31 @@ class Application {
       return;
     }
 
-    const [v_R_strafe, w_R, pose_RB] = (() => {
+    const [v_R_strafe, w_R] = (() => {
       // Are we in keyboard mode?
       if (!this._joystick.present) {
         const v_R = [this._kbd_v[0], this._kbd_v[1], 0];
         const w_R = [0, 0, this._kbd_w[0]];
-        return [v_R, w_R, null];
+        return [v_R, w_R];
       }
-      // Are we in body mode?
-      if (this._joystick.down(Joystick.BUTTON_SHOULDER_LB)) {
-        const v_R = [0, 0, 0];
-        const w_R = [0, 0, 0];
 
-        const yaw = this._joystick.axis(Joystick.AXES_RIGHT_X) *
-              CMD_MAX_POSE_YAW;
-        const pitch = -this._joystick.axis(Joystick.AXES_RIGHT_Y) *
-              CMD_MAX_POSE_PITCH;
-        const pose_RB_so3 = quaternionMultiply(
-          quaternionMultiply(
-            makeUnitQuaternion(),
-            makeQuaternionAxisRotate(0, 1, 0, pitch)),
-          makeQuaternionAxisRotate(0, 0, 1, yaw));
-        const pose_RB = {
-          translation : [
-            -this._joystick.axis(Joystick.AXES_LEFT_Y) * CMD_MAX_POSE_X,
-            this._joystick.axis(Joystick.AXES_LEFT_X) * CMD_MAX_POSE_Y,
-            0
-          ],
-          so3 : quaternionJs(pose_RB_so3),
-        };
-        return [v_R, w_R, pose_RB];
-      } else {
-        // Normal movement mode.
-        const v_R = [
-          asymmetricScale(-this._joystick.axis(Joystick.AXES_LEFT_Y),
-                          this.getMaxReverseSpeed(), this.getMaxForwardSpeed()),
-          this._joystick.axis(Joystick.AXES_LEFT_X) * CMD_MAX_RATE_Y,
-          0.0
-        ];
-        const w_R = [
-          0.0,
-          0.0,
-          this._joystick.axis(Joystick.AXES_RIGHT_X) * CMD_MAX_RATE_Z,
-        ];
-        return [v_R, w_R, null];
-      }
+      // Normal movement mode.
+      const v_R = [
+        asymmetricScale(-this._joystick.axis(Joystick.AXES_LEFT_Y),
+                        this.getMaxReverseSpeed(), this.getMaxForwardSpeed()),
+        this._joystick.axis(Joystick.AXES_LEFT_X) * CMD_MAX_RATE_Y,
+        0.0
+      ];
+      const w_R = [
+        0.0,
+        0.0,
+        this._joystick.axis(Joystick.AXES_RIGHT_X) * CMD_MAX_RATE_Z,
+      ];
+      return [v_R, w_R];
     })();
 
 
-    const disable_strafe = getElement("disable_strafe").checked;
-    const v_R = disable_strafe ? [v_R_strafe[0], 0, 0] : v_R_strafe;
+    const v_R = v_R_strafe;
 
     {
       const desired_rot_cmd = getElement('desired_rot_cmd');
@@ -525,15 +483,8 @@ class Application {
         "mode" : (() => {
           if (this._mode == "off") { return "stopped"; }
           if (this._mode == "stop") { return "zero_velocity" ;}
-          if (this._mode == "idle") { return "rest"; }
 
-          if (!movement_commanded && !force_step &&
-              (this._mode == "walk" ||
-               this._mode == "pronk")) {
-            return "rest";
-          }
-          if (this._mode == "walk") { return "walk"; }
-          if (this._mode == "pronk") { return "jump"; }
+          if (this._mode == "drive") { return "drive"; }
           return "zero_velocity";
         })(),
       },
@@ -546,30 +497,6 @@ class Application {
 
     command["command"]["v_R"] = v_R;
     command["command"]["w_R"] = w_R;
-
-    if (pose_RB) {
-      command["command"]["rest"] = {
-        offset_RB : pose_RB,
-      };
-    }
-
-    if (command["command"]["mode"] == "jump") {
-      command["command"]["jump"] = {
-        "acceleration" : this.getJumpAcceleration(),
-        "repeat" : getElement("jump_repeat").checked,
-      };
-    } else if (command["command"]["mode"] == "walk") {
-      const height_engaged = (
-        this._joystick.down(Joystick.BUTTON_SHOULDER_RB) ||
-          this._keys['h']);
-      const maximize_flight = getElement("maximize_flight").checked;
-
-      command["command"]["walk"] = {
-        "step_height" : height_engaged ?
-          Number(getElement("height_scale").value) : 1.0,
-        "maximize_flight" : maximize_flight,
-      };
-    }
 
     const command_string = JSON.stringify(command);
     getElement('current_json_command').innerHTML = command_string;
@@ -602,9 +529,7 @@ class Application {
         const cur = this._state.mode;
         if (cur == "stopped") { return "off"; }
         if (cur == "zero_velocity") { return "stop"; }
-        if (cur == "rest") { return "idle" };
-        if (cur == "walk") { return "walk" };
-        if (cur == "jump") { return "pronk" };
+        if (cur == "drive") { return "drive" };
         return "stop";
       })();
       for (const mode_check  of document.getElementsByClassName("mode_check")) {
@@ -624,8 +549,7 @@ class Application {
         const cur = this._state.mode;
         if (cur == "stopped") { return "power off"; }
         if (cur == "zero_velocity") { return "damped"; }
-        if (cur == "rest") { return "idle"; }
-        if (cur == "jump") { return "pronk"; }
+        if (cur == "drive") { return "drive"; }
         return cur;
       })() + ')';
     }
@@ -643,7 +567,7 @@ class Application {
     }
 
     // Movement command.
-    {
+    if (0) {  // TODO
       const desired_R = this._state.state.robot.desired_R;
       const desired_rot_act = getElement('desired_rot_act');
       const scaled_w =

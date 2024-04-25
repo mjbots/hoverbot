@@ -575,8 +575,8 @@ class HoverbotControl::Impl {
         DoControl_Joint();
         break;
       }
-      case HM::kVelocity: {
-        DoControl_Velocity();
+      case HM::kDrive: {
+        DoControl_Drive();
         break;
       }
       case HM::kNumModes: {
@@ -613,7 +613,7 @@ class HoverbotControl::Impl {
         status_.mode = current_command_.mode;
         break;
       }
-      case HM::kVelocity: {
+      case HM::kDrive: {
         // TODO!
         break;
       }
@@ -628,7 +628,7 @@ class HoverbotControl::Impl {
         case HM::kFault:
         case HM::kZeroVelocity:
         case HM::kJoint:
-        case HM::kVelocity:
+        case HM::kDrive:
         case HM::kNumModes: {
           break;
         }
@@ -732,7 +732,7 @@ class HoverbotControl::Impl {
     ControlJoints(current_command_.joints);
   }
 
-  void DoControl_Velocity() {
+  void DoControl_Drive() {
     DoControl_Joint();
   }
 

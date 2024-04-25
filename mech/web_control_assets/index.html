@@ -4,7 +4,7 @@
 <html>
   <head>
     <meta charset="UTF-8"/>
-    <title>mjmech quad control</title>
+    <title>hoverbot control</title>
     <link rel="stylesheet" href="styles.css"/>
   </head>
   <body>
@@ -22,14 +22,8 @@
         <input type="radio" id="stop" name="mode" class="mode_check" value="stop">
         <label for="stop" class="mode_label">Stop</label>
 
-        <input type="radio" id="idle" name="mode" class="mode_check" value="idle">
-        <label for="idle" class="mode_label">Idle</label>
-
-        <input type="radio" id="walk" name="mode" class="mode_check" value="walk">
-        <label for="walk" class="mode_label">Walk</label>
-
-        <input type="radio" id="pronk" name="mode" class="mode_check" value="pronk">
-        <label for="pronk" class="mode_label">Pronk</label>
+        <input type="radio" id="drive" name="mode" class="mode_check" value="idle">
+        <label for="drive" class="mode_label">Drive</label>
       </div>
     </div>
     <div id="fault_text_container" class="toplevel">
@@ -111,13 +105,6 @@
                class="lbl-toggle">ADVANCED</label>
         <div id="advanced_content_container" class="collapsible-content-vert">
           <div class="bottom-advanced">
-            <select id="jump_acceleration">
-              <option value="4">4 m/s^2</option>
-              <option value="6" selected="true">6 m/s^2</option>
-              <option value="8">8 m/s^2</option>
-              <option value="10">10 m/s^2</option>
-            </select>
-            <label for="jump_acceleration">Jump Accel</label>
             <select id="max_forward_speed">
               <option value="0.5">0.5 m/s</option>
               <option value="1" selected="true">1 m/s</option>
@@ -125,17 +112,6 @@
               <option value="3">3 m/s</option>
             </select>
             <label for="max_forward_speed">Max Forward Speed</label>
-            <select id="height_scale">
-              <option value="1.5">1.5</option>
-              <option value="2.0" selected="true">2.0</option>
-              <option value="2.5">2.5</option>
-              <option value="3.0">3.0</option>
-            </select>
-            <label for="height_scale">Step Height Scale</label>
-            <input type="checkbox" id="jump_repeat" checked="true">Repeat Jump</input>
-            <input type="checkbox" id="always_step">Always Step</input>
-            <input type="checkbox" id="disable_strafe" checked="true">Disable Strafe</input>
-            <input type="checkbox" id="maximize_flight">Maximize Flight</input>
             <input type="checkbox" id="record_data">Record Data</input>
             <input type="button" id="power_off" value="Power Off / Clear Fault"></input>
           </div>
