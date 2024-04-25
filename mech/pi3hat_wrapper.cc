@@ -85,7 +85,7 @@ class Pi3hatWrapper::Impl {
     boost::asio::post(
         child_context_,
         [this, callback=std::move(callback), request, reply,
-         request_attitude=(attitude_ != nullptr),
+         request_attitude=(attitude_ != nullptr)]() mutable {
           this->CHILD_Transmit(
               request, reply,
               request_attitude,
