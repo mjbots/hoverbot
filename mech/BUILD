@@ -101,54 +101,11 @@ cc_test(
     ],
 )
 
-cc_binary(
-    name = "direct_servo_latency_test",
-    srcs = ["direct_servo_latency_test.cc"],
-    deps = [":mech"],
-)
-
-cc_binary(
-    name = "qdd100_test",
-    srcs = ["qdd100_test.cc"],
-    deps = [
-        ":mech",
-        "//base",
-        "@com_github_mjbots_mjlib//mjlib/base:clipp_archive",
-        "@com_github_mjbots_mjlib//mjlib/base:clipp",
-        "@com_github_mjbots_mjlib//mjlib/multiplex:stream_asio_client_builder",
-        "@org_llvm_libcxx//:libcxx",
-    ],
-)
-
-cc_binary(
-    name = "aruco_test",
-    srcs = ["aruco_test.cc"],
-    deps = ["//base", "@boost", "@boost//:timer", "@boost//:system", "@fmt",
-            "@opencv//:aruco", "@opencv//:imgcodecs"],
-)
-
-cc_binary(
-    name = "aruco_draw",
-    srcs = ["aruco_draw.cc"],
-    deps = ["//base", "@boost", "@boost//:timer",
-            "@opencv//:aruco", "@opencv//:imgcodecs"],
-)
-
 module_main(
     name = "quadruped",
     cname = "mjmech::mech::Quadruped",
     prefix = "mech",
     deps = [":mech"],
-)
-
-cc_binary(
-    name = "multiplex_tool",
-    srcs = ["multiplex_tool_main.cc"],
-    deps = [
-        ":mech",
-        "@com_github_mjbots_mjlib//mjlib/multiplex:libmultiplex_tool",
-        "@org_llvm_libcxx//:libcxx",
-    ],
 )
 
 pkg_tar(
@@ -161,10 +118,7 @@ pkg_tar(
         ":quadruped",
     ],
     files = {
-        "//configs:quadruped.ini": "configs/quadruped.ini",
         "//configs:quadruped_a2.ini": "configs/quadruped_a2.ini",
-        "//configs:quada0.cfg": "configs/quada0.cfg",
-        "//configs:quada1.cfg": "configs/quada1.cfg",
         "//configs:quada2.cfg": "configs/quada2.cfg",
         "//utils:config_servos.py": "config_servos.py",
         "//utils:performance_governor.sh": "performance_governor.sh",
@@ -172,26 +126,9 @@ pkg_tar(
         "//utils:quad_screen.conf" : "quad_screen.conf",
         "//utils:quad-start.sh" : "quad-start.sh",
         "//utils:start-robot.sh": "start-robot.sh",
-        "//utils:zero_leg.py": "zero_leg.py",
         "web_control_assets/mjbots.png" : "web_control_assets/mjbots.png",
         "web_control_assets/index.html" : "web_control_assets/index.html",
         "web_control_assets/styles.css" : "web_control_assets/styles.css",
         "web_control_assets/js/app.js" : "web_control_assets/js/app.js",
     },
-)
-
-cc_binary(
-    name = "imgui_test",
-    srcs = ["imgui_test.cc"],
-    deps = [
-        "@boost",
-        "@eigen",
-        "@ffmpeg",
-        "@fmt",
-        "@imgui",
-        "@org_llvm_libcxx//:libcxx",
-    ],
-    copts = [
-        "-Wno-deprecated-declarations",
-    ],
 )
