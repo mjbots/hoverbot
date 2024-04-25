@@ -151,18 +151,6 @@ class Pi3hatWrapper : public Pi3hatInterface {
   /// fails.
   void ReadImu(AttitudeData* data, mjlib::io::ErrorCallback callback) override;
 
-  // ***********************
-  // RfClient
-
-  void AsyncWaitForSlot(
-      int* remote, uint16_t* bitfield, mjlib::io::ErrorCallback) override;
-
-  Slot rx_slot(int remote, int slot_idx) override;
-
-  void tx_slot(int remote, int slot_id, const Slot&) override;
-
-  Slot tx_slot(int remote, int slot_idx) override;
-
   void Cycle(AttitudeData*,
              const Request* request,
              Reply* reply,

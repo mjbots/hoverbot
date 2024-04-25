@@ -29,7 +29,7 @@
 
 #include "base/logging.h"
 
-#include "mech/quadruped_control.h"
+#include "mech/hoverbot_control.h"
 #include "mech/web_server.h"
 
 namespace mjmech {
@@ -225,8 +225,7 @@ class WebControl {
 
     for (const char* to_try : {
             ".",
-            "quadruped.runfiles/com_github_mjbots_mech/mech",
-            "simulator.runfiles/com_github_mjbots_mech/mech",
+            "hoverbot.runfiles/com_github_mjbots_mech/mech",
             }) {
       fs::path this_path = start / to_try / options_.asset_path;
       if (fs::exists(this_path)) {

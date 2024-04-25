@@ -14,21 +14,36 @@
 
 #pragma once
 
-#include "mech/quadruped_command.h"
-#include "mech/quadruped_context.h"
+#include <deque>
+
+#include <boost/noncopyable.hpp>
+
+#include "mjlib/base/assert.h"
+
+#include "mech/hoverbot_command.h"
+#include "mech/hoverbot_config.h"
+#include "mech/hoverbot_state.h"
 
 namespace mjmech {
 namespace mech {
 
-struct TrotResult {
-  std::vector<QuadrupedCommand::Leg> legs_R;
-  base::KinematicRelation desired_RB;
-};
+struct HoverbotContext : boost::noncopyable {
+  using Config = HoverbotConfig;
+  using HC = HoverbotCommand;
 
-/// Execute the trot gait.
-TrotResult QuadrupedTrot(
-    QuadrupedContext* context,
-    const std::vector<QuadrupedCommand::Leg>& old_legs_R);
+  HoverbotContext(const HoverbotConfig& config_in,
+                  const HoverbotCommand* command_in,
+                   HoverbotState* state_in)
+      : config(config_in),
+        command(command_in),
+        state(state_in) {
+  }
+
+
+  const HoverbotConfig& config;
+  const HoverbotCommand* const command;
+  HoverbotState* const state;
+};
 
 }
 }

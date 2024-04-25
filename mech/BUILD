@@ -33,18 +33,11 @@ cc_library(
     name = "mech",
     srcs = [
         "camera_driver.cc",
-        "mammal_ik.cc",
         "mime_type.cc",
-        "nrfusb_client.cc",
         "pi3hat_wrapper.cc",
-        "quadruped.cc",
-        "quadruped_control.cc",
-        "quadruped_trot.cc",
-        "rf_control.cc",
+        "hoverbot.cc",
+        "hoverbot_control.cc",
         "system_info.cc",
-        "swing_trajectory.cc",
-        "trajectory.cc",
-        "trajectory_line_intersect.cc",
         "web_server.cc",
     ],
     hdrs = glob(["*.h"]),
@@ -59,7 +52,6 @@ cc_library(
         "@com_github_mjbots_mjlib//mjlib/multiplex:frame",
         "@com_github_mjbots_mjlib//mjlib/multiplex:register",
         "@opencv//:core",
-        "@opencv//:aruco",
         "@opencv//:imgcodecs",
         "@opencv//:videoio",
         "@sophus",
@@ -84,26 +76,20 @@ cc_library(
     ],
 )
 
-cc_test(
-    name = "test",
-    srcs = ["test/" + x for x in [
-        "expo_map_test.cc",
-        "mammal_ik_test.cc",
-        "swing_trajectory_test.cc",
-        "trajectory_line_intersect_test.cc",
-        "trajectory_test.cc",
-        "test_main.cc",
-        "vertical_line_frame_test.cc",
-    ]],
-    deps = [
-        ":mech",
-        "@boost//:test",
-    ],
-)
+# cc_test(
+#     name = "test",
+#     srcs = ["test/" + x for x in [
+#         "test_main.cc",
+#     ]],
+#     deps = [
+#         ":mech",
+#         "@boost//:test",
+#     ],
+# )
 
 module_main(
-    name = "quadruped",
-    cname = "mjmech::mech::Quadruped",
+    name = "hoverbot",
+    cname = "mjmech::mech::Hoverbot",
     prefix = "mech",
     deps = [":mech"],
 )
@@ -114,8 +100,7 @@ pkg_tar(
     include_runfiles = True,
     package_dir = "mech",
     srcs = [
-        ":multiplex_tool",
-        ":quadruped",
+        ":hoverbot",
     ],
     files = {
         "//configs:quadruped_a2.ini": "configs/quadruped_a2.ini",

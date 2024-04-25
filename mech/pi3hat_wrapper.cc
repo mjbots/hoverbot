@@ -78,47 +78,17 @@ class Pi3hatWrapper::Impl {
     attitude_callback_ = std::move(callback);
   }
 
-  void AsyncWaitForSlot(
-      int* remote,
-      uint16_t* bitfield,
-      mjlib::io::ErrorCallback callback) {
-    rf_remote_ = remote;
-    rf_bitfield_ = bitfield;
-    rf_callback_ = std::move(callback);
-  }
-
-  Slot rx_slot(int remote, int slot_idx) {
-    return rf_rx_slots_[slot_idx];
-  }
-
-  void tx_slot(int remote, int slot_idx, const Slot& slot) {
-    rf_tx_slots_[slot_idx] = slot;
-    rf_to_send_ |= (1 << slot_idx);
-  }
-
-  Slot tx_slot(int remote, int slot_idx) {
-    // We only support one remote.
-    return rf_tx_slots_[slot_idx];
-  }
-
   void AsyncTransmit(
       const Request* request,
       Reply* reply,
       mjlib::io::ErrorCallback callback) {
-    if (rf_to_send_) {
-      // Copy all the RF data to the child.
-      pi3data_.rf_tx_slots = rf_tx_slots_;
-      pi3data_.rf_to_send = rf_to_send_;
-      rf_to_send_ = 0;
-    }
     boost::asio::post(
         child_context_,
         [this, callback=std::move(callback), request, reply,
          request_attitude=(attitude_ != nullptr),
-         request_rf=rf_remote_ != nullptr]() mutable {
           this->CHILD_Transmit(
               request, reply,
-              request_attitude, request_rf,
+              request_attitude,
               std::move(callback));
         });
   }
@@ -128,19 +98,12 @@ class Pi3hatWrapper::Impl {
       const Request* request,
       Reply* reply,
       mjlib::io::ErrorCallback callback) {
-    if (rf_to_send_) {
-      // Copy all the RF data to the child.
-      pi3data_.rf_tx_slots = rf_tx_slots_;
-      pi3data_.rf_to_send = rf_to_send_;
-      rf_to_send_ = 0;
-    }
-
     boost::asio::post(
         child_context_,
-        [this, callback=std::move(callback), attitude, request, reply,
-         request_rf=(rf_remote_ != nullptr)]() mutable {
+        [this, callback=std::move(callback), attitude, request, reply
+         ]() mutable {
           this->CHILD_Cycle(
-              attitude, request, reply, request_rf,
+              attitude, request, reply,
               std::move(callback));
         });
   }
@@ -268,7 +231,6 @@ class Pi3hatWrapper::Impl {
         c.mounting_deg.pitch = options_.mounting.pitch_deg;
         c.mounting_deg.roll = options_.mounting.roll_deg;
         c.attitude_rate_hz = options_.imu_rate_hz;
-        c.rf_id = options_.rf_id;
 
         for (auto& can : c.can) {
           can.automatic_retransmission = true;
@@ -292,32 +254,6 @@ class Pi3hatWrapper::Impl {
 
     // Destroy before we finish.
     pi3hat_.reset();
-  }
-
-  void CHILD_SetupRf(mjbots::pi3hat::Pi3Hat::Input* input) {
-    auto& d = pi3data_;
-    d.tx_rf.clear();
-
-    if (d.rf_to_send) {
-      for (int i = 0; i < 15; i++) {
-        if ((d.rf_to_send & (1 << i)) == 0) { continue; }
-
-        const auto& src = d.rf_tx_slots[i];
-
-        mjbots::pi3hat::RfSlot rf_slot;
-        rf_slot.slot = i;
-        rf_slot.priority = src.priority;
-        rf_slot.size = src.size;
-        std::memcpy(&rf_slot.data[0], &src.data[0], src.size);
-
-        d.tx_rf.push_back(rf_slot);
-      }
-
-      input->tx_rf = {&d.tx_rf[0], d.tx_rf.size()};
-    }
-
-    d.rx_rf.resize(16);
-    input->rx_rf = {&d.rx_rf[0], d.rx_rf.size()};
   }
 
   void CHILD_SetupCAN(mjbots::pi3hat::Pi3Hat::Input* input,
@@ -378,18 +314,15 @@ class Pi3hatWrapper::Impl {
   void CHILD_Cycle(AttitudeData* attitude_dest,
                    const Request* request,
                    Reply* reply,
-                   bool request_rf,
                    mjlib::io::ErrorCallback callback) {
     mjbots::pi3hat::Pi3Hat::Input input;
 
-    CHILD_SetupRf(&input);
     CHILD_SetupCAN(&input, request);
 
     input.attitude = &pi3data_.attitude;
     input.request_attitude = true;
     input.wait_for_attitude = true;
     input.request_attitude_detail = options_.attitude_detail;
-    input.request_rf = request_rf;
     input.timeout_ns = options_.query_timeout_s * 1e9;
     input.rx_extra_wait_ns = 0;
 
@@ -406,18 +339,15 @@ class Pi3hatWrapper::Impl {
   void CHILD_Transmit(const Request* request,
                       Reply* reply,
                       bool request_attitude,
-                      bool request_rf,
                       mjlib::io::ErrorCallback callback) {
     mjbots::pi3hat::Pi3Hat::Input input;
 
-    CHILD_SetupRf(&input);
     CHILD_SetupCAN(&input, request);
 
     input.attitude = &pi3data_.attitude;
     input.request_attitude = request_attitude;
     input.wait_for_attitude = false;
     input.request_attitude_detail = options_.attitude_detail;
-    input.request_rf = request_rf;
     input.timeout_ns = options_.query_timeout_s * 1e9;
 
     pi3data_.result = pi3hat_->Cycle(input);
@@ -677,34 +607,6 @@ class Pi3hatWrapper::Impl {
         make_point(pi3data_.attitude.bias_uncertainty_dps);
   }
 
-  void FinishRF(boost::posix_time::ptime now) {
-    // Then RF.
-    if (rf_remote_) {
-      *rf_remote_ = 0;
-      *rf_bitfield_ = [&]() {
-        uint16_t result = 0;
-        for (size_t i = 0; i < pi3data_.result.rx_rf_size; i++) {
-          const auto& src = pi3data_.rx_rf[i];
-          result |= (1 << src.slot);
-          auto& dst = rf_rx_slots_[src.slot];
-          dst.size = src.size;
-          std::memcpy(&dst.data[0], &src.data[0], src.size);
-          dst.timestamp = now;
-        }
-        return result;
-      }();
-
-      boost::asio::post(
-          executor_,
-          std::bind(std::move(rf_callback_), mjlib::base::error_code()));
-
-      rf_remote_ = nullptr;
-      rf_bitfield_ = nullptr;
-      rf_callback_ = {};
-    }
-  }
-
-
   void FinishCycle(AttitudeData* attitude,
                    Reply* reply,
                    mjlib::io::ErrorCallback callback) {
@@ -712,7 +614,6 @@ class Pi3hatWrapper::Impl {
 
     FinishCAN(reply);
     FinishAttitude(now, attitude);
-    FinishRF(now);
 
     boost::asio::post(
         executor_,
@@ -732,7 +633,6 @@ class Pi3hatWrapper::Impl {
       attitude_ = nullptr;
       attitude_callback_ = {};
     }
-    FinishRF(now);
 
 
     // Finally, post our CAN response.
@@ -766,13 +666,6 @@ class Pi3hatWrapper::Impl {
   AttitudeData* attitude_ = nullptr;
   mjlib::io::ErrorCallback attitude_callback_;
 
-  int* rf_remote_ = nullptr;
-  uint16_t* rf_bitfield_ = nullptr;
-  mjlib::io::ErrorCallback rf_callback_;
-
-  std::array<Slot, 16> rf_rx_slots_ = {};
-  std::array<Slot, 16> rf_tx_slots_ = {};
-  uint16_t rf_to_send_ = 0;
 
   // A cache to hold parsed register data.
   std::vector<mjlib::multiplex::RegisterValue> parsed_data_;
@@ -787,11 +680,7 @@ class Pi3hatWrapper::Impl {
   struct Pi3Data {
     std::vector<mjbots::pi3hat::CanFrame> tx_can;
     std::vector<mjbots::pi3hat::CanFrame> rx_can;
-    std::vector<mjbots::pi3hat::RfSlot> tx_rf;
-    std::vector<mjbots::pi3hat::RfSlot> rx_rf;
     mjbots::pi3hat::Attitude attitude;
-    std::array<Slot, 16> rf_tx_slots = {};
-    uint16_t rf_to_send = 0;
 
     mjbots::pi3hat::Pi3Hat::Output result;
   };
@@ -810,10 +699,6 @@ class Pi3hatWrapper::Impl {
   Impl(const boost::asio::any_io_executor&, const Options&) {}
   void AsyncStart(mjlib::io::ErrorCallback) {}
   void ReadImu(AttitudeData*, mjlib::io::ErrorCallback) {}
-  void AsyncWaitForSlot(int*, uint16_t*, mjlib::io::ErrorCallback) {}
-  Slot rx_slot(int, int) { return {}; }
-  void tx_slot(int, int, const Slot&) {}
-  Slot tx_slot(int, int) { return {}; }
   void AsyncTransmit(const Request*, Reply*, mjlib::io::ErrorCallback) {}
   void Cycle(AttitudeData*, const Request*, Reply*,
              mjlib::io::ErrorCallback) {}
@@ -839,25 +724,6 @@ void Pi3hatWrapper::AsyncStart(mjlib::io::ErrorCallback callback) {
 void Pi3hatWrapper::ReadImu(AttitudeData* data,
                               mjlib::io::ErrorCallback callback) {
   impl_->ReadImu(data, std::move(callback));
-}
-
-void Pi3hatWrapper::AsyncWaitForSlot(
-    int* remote,
-    uint16_t* bitfield,
-    mjlib::io::ErrorCallback callback) {
-  impl_->AsyncWaitForSlot(remote, bitfield, std::move(callback));
-}
-
-Pi3hatWrapper::Slot Pi3hatWrapper::rx_slot(int remote, int slot_idx) {
-  return impl_->rx_slot(remote, slot_idx);
-}
-
-void Pi3hatWrapper::tx_slot(int remote, int slot_idx, const Slot& slot) {
-  impl_->tx_slot(remote, slot_idx, slot);
-}
-
-Pi3hatWrapper::Slot Pi3hatWrapper::tx_slot(int remote, int slot_idx) {
-  return impl_->tx_slot(remote, slot_idx);
 }
 
 void Pi3hatWrapper::AsyncTransmit(const Request* request,

@@ -27,26 +27,26 @@
 
 #include "mech/control_timing.h"
 #include "mech/pi3hat_interface.h"
-#include "mech/quadruped_command.h"
-#include "mech/quadruped_state.h"
+#include "mech/hoverbot_command.h"
+#include "mech/hoverbot_state.h"
 
 namespace mjmech {
 namespace mech {
 
 /// This sequences the primary control modes of the quadruped.
-class QuadrupedControl : boost::noncopyable {
+class HoverbotControl : boost::noncopyable {
  public:
   /// @param client_getter will be called at AsyncStart time
   using Pi3hatGetter = std::function<Pi3hatInterface*()>;
-  QuadrupedControl(base::Context&, Pi3hatGetter client_getter);
-  ~QuadrupedControl();
+  HoverbotControl(base::Context&, Pi3hatGetter client_getter);
+  ~HoverbotControl();
 
   void AsyncStart(mjlib::io::ErrorCallback handler);
 
   struct Parameters {
     double max_torque_Nm = -1.0;
     std::string config;
-    std::string log_filename_base = "mjbots-quada1.log";
+    std::string log_filename_base = "mjbots-hoverbot.log";
 
     bool enable_imu = true;
     bool servo_debug = false;
@@ -67,11 +67,11 @@ class QuadrupedControl : boost::noncopyable {
   struct Status {
     boost::posix_time::ptime timestamp;
 
-    QuadrupedCommand::Mode mode = QuadrupedCommand::Mode::kConfiguring;
+    HoverbotCommand::Mode mode = HoverbotCommand::Mode::kConfiguring;
     boost::posix_time::ptime mode_start;
     std::string fault;
 
-    QuadrupedState state;
+    HoverbotState state;
 
     int missing_replies = 0;
     ControlTiming::Status timing;
@@ -91,51 +91,20 @@ class QuadrupedControl : boost::noncopyable {
   };
 
   struct ControlLog {
-    using QC = QuadrupedCommand;
+    using HC = HoverbotCommand;
 
     boost::posix_time::ptime timestamp;
-    std::vector<QC::Joint> joints;
 
-    struct LegPD {
-      base::Point3D cmd_N;
-      base::Point3D gravity_N;
-      base::Point3D accel_N;
-      base::Point3D err_m;
-      base::Point3D err_m_s;
-      base::Point3D p_N;
-      base::Point3D d_N;
-      base::Point3D total_N;
-
-      template <typename Archive>
-      void Serialize(Archive* a) {
-        a->Visit(MJ_NVP(cmd_N));
-        a->Visit(MJ_NVP(gravity_N));
-        a->Visit(MJ_NVP(accel_N));
-        a->Visit(MJ_NVP(err_m));
-        a->Visit(MJ_NVP(err_m_s));
-        a->Visit(MJ_NVP(p_N));
-        a->Visit(MJ_NVP(d_N));
-        a->Visit(MJ_NVP(total_N));
-      }
-    };
-    std::vector<LegPD> leg_pds;
-
-    std::vector<QC::Leg> legs_B;
-    std::vector<QC::Leg> legs_R;
-    base::KinematicRelation desired_RB;
+    std::vector<HC::Joint> joints;
 
     template <typename Archive>
     void Serialize(Archive* a) {
       a->Visit(MJ_NVP(timestamp));
       a->Visit(MJ_NVP(joints));
-      a->Visit(MJ_NVP(leg_pds));
-      a->Visit(MJ_NVP(legs_B));
-      a->Visit(MJ_NVP(legs_R));
-      a->Visit(MJ_NVP(desired_RB));
     }
   };
 
-  void Command(const QuadrupedCommand&);
+  void Command(const HoverbotCommand&);
   const Status& status() const;
 
   clipp::group program_options();

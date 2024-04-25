@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "mech/quadruped.h"
+#include "mech/hoverbot.h"
 
 #include <boost/asio/post.hpp>
 
@@ -25,7 +25,7 @@ namespace pl = std::placeholders;
 namespace mjmech {
 namespace mech {
 
-class Quadruped::Impl {
+class Hoverbot::Impl {
  public:
   Impl(base::Context& context)
       : executor_(context.executor),
@@ -36,25 +36,22 @@ class Quadruped::Impl {
     m_.pi3hat->Register<Pi3hatWrapper>("pi3hat");
     m_.pi3hat->set_default("pi3hat");
 
-    m_.quadruped_control = std::make_unique<QuadrupedControl>(
+    m_.hoverbot_control = std::make_unique<HoverbotControl>(
         context,
         [&]() { return m_.pi3hat->selected(); } );
-    m_.web_control = std::make_unique<QuadrupedWebControl>(
+    m_.web_control = std::make_unique<HoverbotWebControl>(
         context.executor,
-        [q=m_.quadruped_control.get()](const auto& cmd) {
+        [q=m_.hoverbot_control.get()](const auto& cmd) {
           q->Command(cmd);
         },
-        [q=m_.quadruped_control.get()]() {
+        [q=m_.hoverbot_control.get()]() {
           return q->status();
         },
         []() {
-          QuadrupedWebControl::Options options;
+          HoverbotWebControl::Options options;
           options.asset_path = "web_control_assets";
           return options;
         }());
-    m_.rf_control = std::make_unique<RfControl>(
-        context, m_.quadruped_control.get(),
-        [&]() { return m_.pi3hat->selected(); } );
     m_.system_info = std::make_unique<SystemInfo>(context);
   }
 
@@ -77,24 +74,24 @@ class Quadruped::Impl {
   mjlib::io::StreamFactory* const factory_;
   base::TelemetryRegistry* telemetry_registry_;
 
-  base::LogRef log_ = base::GetLogInstance("Quadruped");
+  base::LogRef log_ = base::GetLogInstance("Hoverbot");
 
   Members m_;
   Parameters p_;
 };
 
-Quadruped::Quadruped(base::Context& context)
+Hoverbot::Hoverbot(base::Context& context)
     : impl_(std::make_unique<Impl>(context)) {}
 
-Quadruped::~Quadruped() {}
+Hoverbot::~Hoverbot() {}
 
-void Quadruped::AsyncStart(mjlib::io::ErrorCallback callback) {
+void Hoverbot::AsyncStart(mjlib::io::ErrorCallback callback) {
   impl_->AsyncStart(std::move(callback));
 }
 
-Quadruped::Members* Quadruped::m() { return &impl_->m_; }
+Hoverbot::Members* Hoverbot::m() { return &impl_->m_; }
 
-clipp::group Quadruped::program_options() {
+clipp::group Hoverbot::program_options() {
   return (
       mjlib::base::ClippArchive().Accept(&impl_->p_).release(),
       base::ClippComponentArchive().Accept(&impl_->m_).release()

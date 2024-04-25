@@ -1,4 +1,4 @@
-// Copyright 2016-2019 Josh Pieper, jjp@pobox.com.
+// Copyright 2019-2020 Josh Pieper, jjp@pobox.com.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,42 +14,47 @@
 
 #pragma once
 
-#include <optional>
-
-#include <boost/date_time/posix_time/posix_time_types.hpp>
+#include <vector>
 
 #include "mjlib/base/visitor.h"
 
 #include "base/point3d.h"
+#include "base/sophus.h"
 
 namespace mjmech {
 namespace mech {
 
-struct TargetTrackerData {
-  boost::posix_time::ptime timestamp;
+// This represents the JSON used to configure the geometry of the
+// robot.
+struct HoverbotConfig {
+  double period_s = 0.0025;
+  double min_voltage = 16.0;
 
-  struct Target {
-    base::Point3D center;
-    std::vector<base::Point3D> corners;
+  struct Joint {
+    int id = 0;
+    double sign = 1.0;
+    double rezero_pos_deg = 0.0;
 
     template <typename Archive>
     void Serialize(Archive* a) {
-      a->Visit(MJ_NVP(center));
-      a->Visit(MJ_NVP(corners));
+      a->Visit(MJ_NVP(id));
+      a->Visit(MJ_NVP(sign));
+      a->Visit(MJ_NVP(rezero_pos_deg));
     }
   };
 
-  std::optional<Target> target;
+  std::vector<Joint> joints;
+
+  double voltage_filter_s = 1.0;
 
   template <typename Archive>
   void Serialize(Archive* a) {
-    a->Visit(MJ_NVP(timestamp));
-    a->Visit(MJ_NVP(target));
+    a->Visit(MJ_NVP(period_s));
+    a->Visit(MJ_NVP(min_voltage));
+    a->Visit(MJ_NVP(joints));
+    a->Visit(MJ_NVP(voltage_filter_s));
   }
 };
-
-typedef boost::signals2::signal<
-  void (const TargetTrackerData*)> TargetTrackerDataSignal;
 
 }
 }
