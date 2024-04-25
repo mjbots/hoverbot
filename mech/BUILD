@@ -103,8 +103,8 @@ pkg_tar(
         ":hoverbot",
     ],
     files = {
-        "//configs:quadruped_a2.ini": "configs/quadruped_a2.ini",
-        "//configs:quada2.cfg": "configs/quada2.cfg",
+        "//configs:hoverbot.ini": "configs/hoverbot.ini",
+        "//configs:hoverbot.cfg": "configs/hoverbot.cfg",
         "//utils:config_servos.py": "config_servos.py",
         "//utils:performance_governor.sh": "performance_governor.sh",
         "//utils:quad.cmd" : "quad.cmd",

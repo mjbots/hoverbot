@@ -28,64 +28,33 @@ import tempfile
 
 
 SCRIPT_PATH = os.path.dirname(__file__)
-MOTEUS_TOOL = ['moteus_tool',
-               '--pi3hat-cfg',
-               '1=1,2,3;2=4,5,6;3=7,8,9;4=10,11,12',
-               ]
 
-
-CONFIG_A1 = {
-    'servopos.position_min' : [
-        ('1,2,4,5,7,8,10,11', '-.70'),
-        ('3,6,9,12', '-.25'),
-    ],
-    'servopos.position_max' : [
-        ('1,2,4,5,7,8,10,11', '.70'),
-        ('3,6,9,12', '.25'),
-    ],
+CONFIG = {
+    'servopos.position_min' : 'nan',
+    'servopos.position_max' : 'nan',
     'servo.flux_brake_min_voltage' : '20.5',
     'servo.flux_brake_resistance_ohm' : '0.05',
-    'servo.pid_position.kp' : [
-        ('1,2,4,5,7,8,10,11', '50'),
-        ('3,6,9,12', '200'),
-    ],
-    'servo.velocity_threshold' : '0.01',
-    'servo.pid_position.kd' : '6',
-    'servo.pid_dq.kp' : '0.026',
-    'servo.pid_dq.ki' : '56',
-    'motor_position.rotor_to_output_ratio' : [
-        ('1,3,4,6,7,9,10,12', '0.16666667'),
-        ('2,5,8,11', '0.093750'),
-    ],
-    'motor_position.sources.0.pll_filter_hz' : '200.0',
-}
+    'servo.pid_position.kp' : '4',
+    'servo.pid_position.kd' : '0.05',
 
-CONFIG_A2 = {
-    'servopos.position_min' : [
-        ('1,2,4,5,7,8,10,11', '-.70'),
-        ('3,6,9,12', '-.25'),
-    ],
-    'servopos.position_max' : [
-        ('1,2,4,5,7,8,10,11', '.70'),
-        ('3,6,9,12', '.25'),
-    ],
-    'servo.flux_brake_min_voltage' : '20.5',
-    'servo.flux_brake_resistance_ohm' : '0.05',
-    'servo.pid_position.kp' : [
-        ('1,2,4,5,7,8,10,11', '100'),
-        ('3,6,9,12', '300'),
-    ],
-    'servo.velocity_threshold' : '0',
-    'servo.pid_position.kd' : '9',
-    'servo.pid_dq.kp' : '0.026',
-    'servo.pid_dq.ki' : '56',
-    'motor_position.rotor_to_output_ratio' : [
-        ('1,3,4,6,7,9,10,12', '0.16666667'),
-        ('2,5,8,11', '0.1071428'),
-    ],
-    'motor_position.sources.0.pll_filter_hz' : '200.0',
-}
+    'aux2.spi.mode' : '1', # disabled
+    'aux2.pins.0.mode' : '6',  # hall
+    'aux2.pins.1.mode' : '6',  # hall
+    'aux2.pins.2.mode' : '6',  # hall
+    'aux2.pins.0.pull' : '1',  # pullup
+    'aux2.pins.1.pull' : '1',  # pullup
+    'aux2.pins.2.pull' : '1',  # pullup
+    'aux2.hall.enabled' : '1',
 
+    'motor_position.sources.0.aux_number' : '2',
+    'motor_position.sources.0.type' : '4',
+    'motor_position.sources.0.cpr' : '90',
+    'motor_position.sources.0.offset' : '-4',
+    'motor_position.sources.0.pll_filter_hz' : '45',
+    'motor.poles' : '30',
+    'motor.resistance_ohm' : '0.326',
+    'motor.v_per_hz' : '1.293',
+}
 
 async def config_servo(args, transport, servo_id):
     if args.verbose:
@@ -95,8 +64,6 @@ async def config_servo(args, transport, servo_id):
     s = moteus.Stream(c, verbose=args.verbose)
 
     await s.flush_read()
-
-    CONFIG = CONFIG_A1 if args.a1 else CONFIG_A2
 
     for key, data_or_value in CONFIG.items():
         try:
@@ -121,7 +88,6 @@ async def config_servo(args, transport, servo_id):
 async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--verbose', action='store_true')
-    parser.add_argument('--a1', action='store_true')
 
     args = parser.parse_args()
 
@@ -130,14 +96,12 @@ async def main():
 
     transport = moteus_pi3hat.Pi3HatRouter(
         servo_bus_map = {
-            1: [1, 2, 3],
-            2: [4, 5, 6],
-            3: [7, 8, 9],
-            4: [10, 11, 12],
+            1: [1],
+            3: [2],
         },
     )
 
-    for i in range(1, 13):
+    for i in range(1, 3):
         await config_servo(args, transport, i)
 
 if __name__ == '__main__':
