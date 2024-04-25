@@ -60,8 +60,12 @@ struct HoverbotCommand {
     // robot state.
     kZeroVelocity = 3,
 
+    // In this mode, each joint is commanded individually with a
+    // position, velocity, and torque.
+    kJoint = 4,
+
     // Drive at a fixed velocity and yaw rate.
-    kVelocity = 4,
+    kVelocity = 5,
 
     kNumModes,
   };
@@ -124,6 +128,7 @@ struct IsEnum<mjmech::mech::HoverbotCommand::Mode> {
         { M::kStopped, "stopped" },
         { M::kFault, "fault" },
         { M::kZeroVelocity, "zero_velocity" },
+        { M::kJoint, "joint" },
         { M::kVelocity, "velocity" },
       }};
   }

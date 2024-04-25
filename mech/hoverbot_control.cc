@@ -571,6 +571,10 @@ class HoverbotControl::Impl {
         DoControl_ZeroVelocity();
         break;
       }
+      case HM::kJoint: {
+        DoControl_Joint();
+        break;
+      }
       case HM::kVelocity: {
         DoControl_Velocity();
         break;
@@ -602,7 +606,8 @@ class HoverbotControl::Impl {
         status_.mode = HM::kStopped;
         break;
       }
-      case HM::kZeroVelocity: {
+      case HM::kZeroVelocity:
+      case HM::kJoint: {
         // We can always do these if not faulted.
         if (status_.mode == HM::kFault) { return; }
         status_.mode = current_command_.mode;
@@ -622,6 +627,7 @@ class HoverbotControl::Impl {
         case HM::kStopped:
         case HM::kFault:
         case HM::kZeroVelocity:
+        case HM::kJoint:
         case HM::kVelocity:
         case HM::kNumModes: {
           break;
