@@ -95,10 +95,10 @@ module_main(
 )
 
 pkg_tar(
-    name = "quad_deploy",
+    name = "hoverbot_deploy",
     extension = "tar",
     include_runfiles = True,
-    package_dir = "mech",
+    package_dir = "hoverbot",
     srcs = [
         ":hoverbot",
     ],
@@ -107,9 +107,9 @@ pkg_tar(
         "//configs:hoverbot.cfg": "configs/hoverbot.cfg",
         "//utils:config_servos.py": "config_servos.py",
         "//utils:performance_governor.sh": "performance_governor.sh",
-        "//utils:quad.cmd" : "quad.cmd",
-        "//utils:quad_screen.conf" : "quad_screen.conf",
-        "//utils:quad-start.sh" : "quad-start.sh",
+        "//utils:hoverbot.cmd" : "hoverbot.cmd",
+        "//utils:hoverbot_screen.conf" : "hoverbot_screen.conf",
+        "//utils:hoverbot-start.sh" : "hoverbot-start.sh",
         "//utils:start-robot.sh": "start-robot.sh",
         "web_control_assets/mjbots.png" : "web_control_assets/mjbots.png",
         "web_control_assets/index.html" : "web_control_assets/index.html",

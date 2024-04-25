@@ -65,7 +65,7 @@ struct HoverbotCommand {
     kJoint = 4,
 
     // Drive at a fixed velocity and yaw rate.
-    kVelocity = 5,
+    kDrive = 5,
 
     kNumModes,
   };

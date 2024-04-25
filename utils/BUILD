@@ -19,8 +19,8 @@ package(default_visibility = ["//visibility:public"])
 exports_files([
     "config_servos.py",
     "performance_governor.sh",
-    "quad-start.sh",
-    "quad_screen.conf",
-    "quad.cmd",
+    "hoverbot-start.sh",
+    "hoverbot_screen.conf",
+    "hoverbot.cmd",
     "start-robot.sh",
 ])
