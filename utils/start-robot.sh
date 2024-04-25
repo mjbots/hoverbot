@@ -15,7 +15,7 @@ mach=$(uname -m)
 
 cd $(dirname $(dirname $(readlink -f $0)))
 
-if [[ "$mach" == "armv7l" ]]; then
+if [[ "$mach" == "aarch64" ]]; then
     CONFIG="-c configs/hoverbot.ini --hoverbot_control.log_filename_base /home/pi/mjbots-hoverbot.log"
     set -x
     cd /home/pi/hoverbot/
