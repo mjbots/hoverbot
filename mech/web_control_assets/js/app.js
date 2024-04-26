@@ -29,7 +29,6 @@ const iota = (v) => Array.from((new Array(v)).keys());
 
 const PERSIST_ELEMENTS = [
   "max_forward_speed",
-  "height_scale",
   "record_data",
 ];
 
@@ -476,7 +475,6 @@ class Application {
     const movement_commanded = (
       v_norm > TRANSLATION_EPSILON ||
         w_norm > ROTATION_EPSILON);
-    const force_step = getElement("always_step").checked;
 
     let command = {
       "command" : {

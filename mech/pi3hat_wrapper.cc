@@ -644,10 +644,8 @@ class Pi3hatWrapper::Impl {
   int SelectBus(int id) const {
     if (options_.force_bus >= 0) { return options_.force_bus; }
 
-    return (id >= 1 && id <= 3) ? 1 :
-        (id >= 4 && id <= 6) ? 2 :
-        (id >= 7 && id <= 9) ? 3 :
-        (id >= 10 && id <= 12) ? 4 :
+    return id == 1 ? 1 :
+        id == 2 ? 3 :
         1; // just send everything else out to 1 by default
   }
 

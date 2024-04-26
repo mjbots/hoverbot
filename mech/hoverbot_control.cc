@@ -225,7 +225,32 @@ class HoverbotControl::Impl {
   void PopulateStatusRequest() {
     status_request_ = {};
 
-    // TODO
+    for (const auto& joint : config_.joints) {
+      status_request_.push_back({});
+      auto& current = status_request_.back();
+      current.id = joint.id;
+
+      // Read mode, position, velocity, and torque.
+      current.request.ReadMultiple(moteus::Register::kMode, 4, 1);
+      current.request.ReadMultiple(moteus::Register::kVoltage, 3, 0);
+
+      if (parameters_.servo_debug) {
+        current.request.ReadMultiple(moteus::Register::kPositionKp, 5, 1);
+      }
+    }
+
+    config_status_request_ = {};
+    for (const auto& joint : config_.joints) {
+      config_status_request_.push_back({});
+      auto& current = config_status_request_.back();
+      current.id = joint.id;
+
+      // While configuring, we request a few more things.
+      current.request.ReadMultiple(moteus::Register::kMode, 4, 1);
+      current.request.ReadMultiple(moteus::Register::kRezeroState, 4, 0);
+      current.request.ReadMultiple(moteus::Register::kRegisterMapVersion, 1, 2);
+      current.request.ReadMultiple(moteus::Register::kSerialNumber, 3, 2);
+    }
   }
 
   void HandleTimer(const mjlib::base::error_code& ec) {
@@ -647,10 +672,6 @@ class HoverbotControl::Impl {
     // All of them must have been rezerod and have the current
     // register map.
     for (const auto& servo : reported_servo_config_.servos) {
-      if (servo.rezero_state <= 1) {
-        status_.fault = fmt::format("servo {} not rezerod", servo.id);
-        return false;
-      }
       if (servo.register_map_version != moteus::kCurrentRegisterMapVersion) {
         status_.fault = fmt::format("servo {} has incorrect register version {}",
                                     servo.id, servo.register_map_version);
@@ -666,21 +687,7 @@ class HoverbotControl::Impl {
     // If we are configuring, and have received a status that *all* of
     // our servos are not zeroed, then we skip a control cycle and
     // instead rezero them.
-    const int need_rezero_count = [&]() {
-      int total = 0;
-      for (const auto& servo : reported_servo_config_.servos) {
-        if (servo.rezero_state <= 1) { total++; }
-      }
-      return total;
-    }();
-
-    if (need_rezero_count == kNumServos) {
-      // Instead of sending a normal command, we will tell our servos
-      // to rezero.
-      EmitRezero();
-    } else {
-      EmitStop();
-    }
+    EmitStop();
   }
 
   void DoControl_Stopped() {
@@ -876,23 +883,6 @@ class HoverbotControl::Impl {
     }
     if (client_command_.size() > pos) {
       client_command_.resize(pos);
-    }
-  }
-
-  void EmitRezero() {
-    log_.warn("Emitting rezero to all servos");
-
-    status_.performed_rezero = true;
-
-    client_command_.resize(config_.joints.size());
-    size_t pos = 0;
-    for (const auto& joint : config_.joints) {
-      auto& request = client_command_[pos++];
-      request.request.clear();
-      request.id = joint.id;
-
-      request.request.WriteSingle(
-          moteus::kRezero, static_cast<float>(joint.rezero_pos_deg / 360.0));
     }
   }
 
