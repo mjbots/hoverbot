@@ -48,6 +48,17 @@ struct HoverbotConfig {
 
   std::vector<Joint> joints;
 
+  struct StandUp {
+    double pitch_rate_dps = 180.0;
+
+    template <typename Archive>
+    void Serialize(Archive* a) {
+      a->Visit(MJ_NVP(pitch_rate_dps));
+    }
+  };
+
+  StandUp stand_up;
+
   struct Pitch {
     double pitch_offset_deg = 0.0;
     mjlib::base::PID::Config pitch_pid;
@@ -84,6 +95,7 @@ struct HoverbotConfig {
     a->Visit(MJ_NVP(min_voltage));
     a->Visit(MJ_NVP(wheel_diameter_m));
     a->Visit(MJ_NVP(joints));
+    a->Visit(MJ_NVP(stand_up));
     a->Visit(MJ_NVP(pitch));
     a->Visit(MJ_NVP(drive));
     a->Visit(MJ_NVP(voltage_filter_s));

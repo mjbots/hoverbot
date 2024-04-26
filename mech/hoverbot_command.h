@@ -64,11 +64,14 @@ struct HoverbotCommand {
     // position, velocity, and torque.
     kJoint = 4,
 
+    // Rise from laying down.
+    kStandUp = 5,
+
     // Maintain a fixed pitch and yaw torque.
-    kPitch = 5,
+    kPitch = 6,
 
     // Drive at a fixed velocity and yaw rate.
-    kDrive = 6,
+    kDrive = 7,
 
     kNumModes,
   };
@@ -165,6 +168,7 @@ struct IsEnum<mjmech::mech::HoverbotCommand::Mode> {
         { M::kFault, "fault" },
         { M::kZeroVelocity, "zero_velocity" },
         { M::kJoint, "joint" },
+        { M::kStandUp, "stand_up" },
         { M::kPitch, "pitch" },
         { M::kDrive, "drive" },
       }};

@@ -343,8 +343,9 @@ class HoverbotControl::Impl {
 
     timing_.finish_status();
 
-    if (std::abs(imu_data_.euler_deg.roll) > 45 ||
-        std::abs(imu_data_.euler_deg.pitch) > 45) {
+    if ((std::abs(imu_data_.euler_deg.roll) > 60 ||
+         std::abs(imu_data_.euler_deg.pitch) > 60) &&
+        status_.state.robot.in_control_time_s > 5.0) {
       if (status_.mode != HM::kFault) {
         Fault("Tipping over");
       }
@@ -613,6 +614,10 @@ class HoverbotControl::Impl {
         DoControl_Joint();
         break;
       }
+      case HM::kStandUp: {
+        DoControl_StandUp();
+        break;
+      }
       case HM::kPitch: {
         DoControl_Pitch();
         break;
@@ -646,6 +651,7 @@ class HoverbotControl::Impl {
         // It is always valid (although I suppose not always a good
         // idea) to enter the stopped mode.
         status_.mode = HM::kStopped;
+        status_.state.robot.in_control_time_s = 0.0;
         break;
       }
       case HM::kZeroVelocity:
@@ -653,15 +659,27 @@ class HoverbotControl::Impl {
         // We can always do these if not faulted.
         if (status_.mode == HM::kFault) { return; }
         status_.mode = current_command_.mode;
+        status_.state.robot.in_control_time_s = 0.0;
+        break;
+      }
+      case HM::kStandUp: {
+        status_.state.stand_up.pitch_target_deg = imu_data_.euler_deg.pitch;
         break;
       }
       case HM::kPitch:
       case HM::kDrive: {
-        // We can't enter these if we are faulted.
         if (status_.mode == HM::kFault) { return; }
 
-        // TODO!  Optionally enforce a "stand up" phase.
-        status_.mode = current_command_.mode;
+        if (status_.mode == HM::kStopped ||
+            status_.mode == HM::kZeroVelocity) {
+          status_.mode = HM::kStandUp;
+          status_.state.stand_up.pitch_target_deg = imu_data_.euler_deg.pitch;
+        } else if (status_.mode == HM::kPitch ||
+                   status_.mode == HM::kDrive ||
+                   status_.state.stand_up.pitch_target_deg == 0.0) {
+          // We can't enter these if we are faulted.
+          status_.mode = current_command_.mode;
+        }
         break;
       }
     }
@@ -677,6 +695,10 @@ class HoverbotControl::Impl {
         case HM::kJoint: {
           status_.state.pitch.pitch_pid.Clear();
           status_.state.pitch.yaw_pid.Clear();
+          status_.state.pitch.yaw_target = imu_data_.euler_deg.yaw;
+          break;
+        }
+        case HM::kStandUp: {
           status_.state.pitch.yaw_target = imu_data_.euler_deg.yaw;
           break;
         }
@@ -747,7 +769,7 @@ class HoverbotControl::Impl {
   }
 
   void DoControl_Fault() {
-    DoControl_Stopped();
+    EmitStop();
   }
 
   void DoControl_ZeroVelocity() {
@@ -767,29 +789,40 @@ class HoverbotControl::Impl {
     ControlJoints(current_command_.joints);
   }
 
-  void ControlPitch(const HC::Pitch& pitch) {
+  enum YawMode {
+    kEnableYaw,
+    kDisableYaw,
+  };
+
+  void ControlPitch(const HC::Pitch& pitch, YawMode yaw_mode) {
+    status_.state.robot.in_control_time_s += period_s_;
+
     control_log_->pitch = pitch;
 
     const auto pitch_torque_Nm =
         pitch_pid_.Apply(
             imu_data_.euler_deg.pitch,
             -pitch.pitch_deg + config_.pitch.pitch_offset_deg,
-            imu_data_.rate_dps.y(), pitch.pitch_rate_dps,
-            rate_hz_);
-
-    status_.state.pitch.yaw_target =
-        base::WrapNeg180To180(
-            status_.state.pitch.yaw_target +
-            pitch.yaw_rate_dps * period_s_);
-    const auto yaw_torque_Nm =
-        yaw_pid_.Apply(
-            base::WrapNeg180To180(
-                imu_data_.euler_deg.yaw - status_.state.pitch.yaw_target),
-            0.0,
-            imu_data_.rate_dps.z(), pitch.yaw_rate_dps,
+            imu_data_.rate_dps.y(), -pitch.pitch_rate_dps,
             rate_hz_);
 
     control_log_->pitch_torque_Nm = pitch_torque_Nm;
+
+    double yaw_torque_Nm = 0.0;
+    if (yaw_mode == kEnableYaw) {
+      status_.state.pitch.yaw_target =
+          base::WrapNeg180To180(
+              status_.state.pitch.yaw_target +
+              pitch.yaw_rate_dps * period_s_);
+      yaw_torque_Nm =
+          yaw_pid_.Apply(
+              base::WrapNeg180To180(
+                  imu_data_.euler_deg.yaw - status_.state.pitch.yaw_target),
+              0.0,
+              imu_data_.rate_dps.z(), pitch.yaw_rate_dps,
+              rate_hz_);
+    }
+
     control_log_->yaw_torque_Nm = yaw_torque_Nm;
 
     std::vector<HC::Joint> joints;
@@ -807,8 +840,28 @@ class HoverbotControl::Impl {
     ControlJoints(std::move(joints));
   }
 
+  void DoControl_StandUp() {
+    // This isn't a control optimal approach at all, but making a
+    // linear trajectory to follow does make it smoother.
+
+    const auto old_target = status_.state.stand_up.pitch_target_deg;
+    const auto sign = old_target < 0 ? -1.0 : 1.0;
+    status_.state.stand_up.pitch_target_deg += -sign * config_.stand_up.pitch_rate_dps * period_s_;
+
+    if (old_target * status_.state.stand_up.pitch_target_deg <= 0.0) {
+      status_.state.stand_up.pitch_target_deg = 0.0;
+    }
+
+    HC::Pitch pitch;
+    pitch.pitch_deg = -status_.state.stand_up.pitch_target_deg;
+    pitch.pitch_rate_dps = sign * config_.stand_up.pitch_rate_dps;
+    pitch.yaw_rate_dps = 0.0;
+
+    ControlPitch(pitch, kDisableYaw);
+  }
+
   void DoControl_Pitch() {
-    ControlPitch(current_command_.pitch);
+    ControlPitch(current_command_.pitch, kEnableYaw);
   }
 
   void ControlDrive(const HC::Drive& drive) {
@@ -829,7 +882,7 @@ class HoverbotControl::Impl {
     pitch.pitch_rate_dps = 0.0;  // TODO
     pitch.yaw_rate_dps = drive.yaw_rate_dps;
 
-    ControlPitch(pitch);
+    ControlPitch(pitch, kEnableYaw);
   }
 
   void DoControl_Drive() {

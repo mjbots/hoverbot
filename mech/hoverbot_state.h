@@ -70,6 +70,17 @@ struct HoverbotState {
 
   std::vector<Joint> joints;
 
+  struct StandUp {
+    double pitch_target_deg = 0.0;
+
+    template <typename Archive>
+    void Serialize(Archive* a) {
+      a->Visit(MJ_NVP(pitch_target_deg));
+    }
+  };
+
+  StandUp stand_up;
+
   struct Pitch {
     mjlib::base::PID::State pitch_pid;
     mjlib::base::PID::State yaw_pid;
@@ -101,12 +112,14 @@ struct HoverbotState {
     double velocity_mps = 0.0;
     double accel_mps2 = 0.0;
     double voltage = 0.0;
+    double in_control_time_s = 0.0;
 
     template <typename Archive>
     void Serialize(Archive* a) {
       a->Visit(MJ_NVP(velocity_mps));
       a->Visit(MJ_NVP(accel_mps2));
       a->Visit(MJ_NVP(voltage));
+      a->Visit(MJ_NVP(in_control_time_s));
     }
   };
 
@@ -115,6 +128,7 @@ struct HoverbotState {
   template <typename Archive>
   void Serialize(Archive* a) {
     a->Visit(MJ_NVP(joints));
+    a->Visit(MJ_NVP(stand_up));
     a->Visit(MJ_NVP(pitch));
     a->Visit(MJ_NVP(drive));
     a->Visit(MJ_NVP(robot));
