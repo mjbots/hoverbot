@@ -499,7 +499,7 @@ class HoverbotControl::Impl {
     }
 
     status_.state.robot.velocity_mps =
-        config_.wheel_diameter_m * M_PI *
+        -config_.wheel_diameter_m * M_PI *
         Average(status_.state.joints.begin(),
                 status_.state.joints.end(),
                 [](const auto& joint) {
@@ -773,7 +773,7 @@ class HoverbotControl::Impl {
     const auto pitch_torque_Nm =
         pitch_pid_.Apply(
             imu_data_.euler_deg.pitch,
-            pitch.pitch_deg + config_.pitch.pitch_offset_deg,
+            -pitch.pitch_deg + config_.pitch.pitch_offset_deg,
             imu_data_.rate_dps.y(), pitch.pitch_rate_dps,
             rate_hz_);
 
