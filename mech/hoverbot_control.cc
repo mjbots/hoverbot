@@ -657,6 +657,9 @@ class HoverbotControl::Impl {
       }
       case HM::kPitch:
       case HM::kDrive: {
+        // We can't enter these if we are faulted.
+        if (status_.mode == HM::kFault) { return; }
+
         // TODO!  Optionally enforce a "stand up" phase.
         status_.mode = current_command_.mode;
         break;
@@ -774,11 +777,17 @@ class HoverbotControl::Impl {
             imu_data_.rate_dps.y(), pitch.pitch_rate_dps,
             rate_hz_);
 
-    status_.state.pitch.yaw_target += pitch.yaw_rate_dps * period_s_;
+    status_.state.pitch.yaw_target =
+        base::WrapNeg180To180(
+            status_.state.pitch.yaw_target +
+            pitch.yaw_rate_dps * period_s_);
     const auto yaw_torque_Nm =
-        yaw_pid_.Apply(imu_data_.euler_deg.yaw, status_.state.pitch.yaw_target,
-                       imu_data_.rate_dps.z(), pitch.yaw_rate_dps,
-                       rate_hz_);
+        yaw_pid_.Apply(
+            base::WrapNeg180To180(
+                imu_data_.euler_deg.yaw - status_.state.pitch.yaw_target),
+            0.0,
+            imu_data_.rate_dps.z(), pitch.yaw_rate_dps,
+            rate_hz_);
 
     control_log_->pitch_torque_Nm = pitch_torque_Nm;
     control_log_->yaw_torque_Nm = yaw_torque_Nm;

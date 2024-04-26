@@ -13,7 +13,7 @@
 // limitations under the License.
 
 const CMD_MAX_RATE_Y = 0.2;
-const CMD_MAX_RATE_Z = Math.PI * 60 / 180.0;
+const CMD_MAX_RATE_Z = Math.PI * 180.0 / 180.0;
 
 
 const CMD_MAX_POSE_YAW = Math.PI * 20 / 180.0;
