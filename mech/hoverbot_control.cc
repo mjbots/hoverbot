@@ -747,7 +747,7 @@ class HoverbotControl::Impl {
   }
 
   void DoControl_Fault() {
-    DoControl_ZeroVelocity();
+    DoControl_Stopped();
   }
 
   void DoControl_ZeroVelocity() {
