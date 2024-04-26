@@ -122,11 +122,14 @@ struct HoverbotCommand {
 
   struct Drive {
     double velocity_mps = 0.0;
+    double accel_mps2 = 0.0;
+
     double yaw_rate_dps = 0.0;
 
     template <typename Archive>
     void Serialize(Archive* a) {
       a->Visit(MJ_NVP(velocity_mps));
+      a->Visit(MJ_NVP(accel_mps2));
       a->Visit(MJ_NVP(yaw_rate_dps));
     }
   };

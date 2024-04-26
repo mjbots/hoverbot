@@ -101,6 +101,8 @@ class HoverbotControl : boost::noncopyable {
     double pitch_torque_Nm = 0.0;
     double yaw_torque_Nm = 0.0;
 
+    HC::Drive drive;
+
     template <typename Archive>
     void Serialize(Archive* a) {
       a->Visit(MJ_NVP(timestamp));
@@ -108,6 +110,7 @@ class HoverbotControl : boost::noncopyable {
       a->Visit(MJ_NVP(pitch));
       a->Visit(MJ_NVP(pitch_torque_Nm));
       a->Visit(MJ_NVP(yaw_torque_Nm));
+      a->Visit(MJ_NVP(drive));
     }
   };
 

@@ -500,6 +500,12 @@ class Application {
         "pitch_rate_dps" : 0.0,
         "yaw_rate_dps" : (w_R[2] / Math.PI * 180.0),
       }
+    } else if (this._mode == "drive") {
+      command["command"]["drive"] = {
+        "velocity_mps" : v_R[0],
+        "accel_mps2" : 0.0,
+        "yaw_rate_dps" : (w_R[2] / Math.PI * 180.0),
+      }
     }
 
     const command_string = JSON.stringify(command);

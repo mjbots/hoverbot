@@ -31,6 +31,8 @@ struct HoverbotConfig {
   double period_s = 0.0025;
   double min_voltage = 16.0;
 
+  double wheel_diameter_m = 0.163;
+
   struct Joint {
     int id = 0;
     double sign = 1.0;
@@ -47,11 +49,13 @@ struct HoverbotConfig {
   std::vector<Joint> joints;
 
   struct Pitch {
+    double pitch_offset_deg = 0.0;
     mjlib::base::PID::Config pitch_pid;
     mjlib::base::PID::Config yaw_pid;
 
     template <typename Archive>
     void Serialize(Archive* a) {
+      a->Visit(MJ_NVP(pitch_offset_deg));
       a->Visit(MJ_NVP(pitch_pid));
       a->Visit(MJ_NVP(yaw_pid));
     }
@@ -59,14 +63,29 @@ struct HoverbotConfig {
 
   Pitch pitch;
 
+  struct Drive {
+    double pitch_limit_deg = 20.0;
+    mjlib::base::PID::Config drive_pid;
+
+    template <typename Archive>
+    void Serialize(Archive* a) {
+      a->Visit(MJ_NVP(pitch_limit_deg));
+      a->Visit(MJ_NVP(drive_pid));
+    }
+  };
+
+  Drive drive;
+
   double voltage_filter_s = 1.0;
 
   template <typename Archive>
   void Serialize(Archive* a) {
     a->Visit(MJ_NVP(period_s));
     a->Visit(MJ_NVP(min_voltage));
+    a->Visit(MJ_NVP(wheel_diameter_m));
     a->Visit(MJ_NVP(joints));
     a->Visit(MJ_NVP(pitch));
+    a->Visit(MJ_NVP(drive));
     a->Visit(MJ_NVP(voltage_filter_s));
   }
 };

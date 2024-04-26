@@ -498,6 +498,18 @@ class HoverbotControl::Impl {
       return false;
     }
 
+    status_.state.robot.velocity_mps =
+        config_.wheel_diameter_m * M_PI *
+        Average(status_.state.joints.begin(),
+                status_.state.joints.end(),
+                [](const auto& joint) {
+                  return joint.velocity_dps / 360.0;
+                });
+
+    // TODO: This should use a simple filter of some kind, perhaps
+    // combined with the current pitch estimate?
+    status_.state.robot.accel_mps2 = 0.0;
+
     {
       const double min_voltage =
           Min(status_.state.joints.begin(), status_.state.joints.end(),
@@ -756,9 +768,11 @@ class HoverbotControl::Impl {
     control_log_->pitch = pitch;
 
     const auto pitch_torque_Nm =
-        pitch_pid_.Apply(imu_data_.euler_deg.pitch, pitch.pitch_deg,
-                         imu_data_.rate_dps.y(), pitch.pitch_rate_dps,
-                         rate_hz_);
+        pitch_pid_.Apply(
+            imu_data_.euler_deg.pitch,
+            pitch.pitch_deg + config_.pitch.pitch_offset_deg,
+            imu_data_.rate_dps.y(), pitch.pitch_rate_dps,
+            rate_hz_);
 
     status_.state.pitch.yaw_target += pitch.yaw_rate_dps * period_s_;
     const auto yaw_torque_Nm =
@@ -789,7 +803,23 @@ class HoverbotControl::Impl {
   }
 
   void ControlDrive(const HC::Drive& drive) {
+    control_log_->drive = drive;
+
     HC::Pitch pitch;
+
+    // TODO: We should have a feedforward where the desired
+    // acceleration determines a pitch term.
+    pitch.pitch_deg =
+        -mjlib::base::Limit<double>(
+            drive_pid_.Apply(
+                status_.state.robot.velocity_mps, drive.velocity_mps,
+                status_.state.robot.accel_mps2, drive.accel_mps2,
+                rate_hz_),
+            -config_.drive.pitch_limit_deg,
+            config_.drive.pitch_limit_deg);
+    pitch.pitch_rate_dps = 0.0;  // TODO
+    pitch.yaw_rate_dps = drive.yaw_rate_dps;
+
     ControlPitch(pitch);
   }
 
@@ -1013,7 +1043,8 @@ class HoverbotControl::Impl {
     &config_.pitch.pitch_pid, &status_.state.pitch.pitch_pid};
   mjlib::base::PID yaw_pid_{
     &config_.pitch.yaw_pid, &status_.state.pitch.yaw_pid};
-
+  mjlib::base::PID drive_pid_{
+    &config_.drive.drive_pid, &status_.state.drive.drive_pid};
 
 };
 

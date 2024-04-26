@@ -85,12 +85,27 @@ struct HoverbotState {
 
   Pitch pitch;
 
+  struct Drive {
+    mjlib::base::PID::State drive_pid;
+
+    template <typename Archive>
+    void Serialize(Archive* a) {
+      a->Visit(MJ_NVP(drive_pid));
+    }
+  };
+
+  Drive drive;
+
   // And finally, the robot level.
   struct Robot {
+    double velocity_mps = 0.0;
+    double accel_mps2 = 0.0;
     double voltage = 0.0;
 
     template <typename Archive>
     void Serialize(Archive* a) {
+      a->Visit(MJ_NVP(velocity_mps));
+      a->Visit(MJ_NVP(accel_mps2));
       a->Visit(MJ_NVP(voltage));
     }
   };
@@ -101,6 +116,7 @@ struct HoverbotState {
   void Serialize(Archive* a) {
     a->Visit(MJ_NVP(joints));
     a->Visit(MJ_NVP(pitch));
+    a->Visit(MJ_NVP(drive));
     a->Visit(MJ_NVP(robot));
   }
 };
