@@ -179,6 +179,7 @@ class HoverbotControl::Impl {
     PopulateStatusRequest();
 
     period_s_ = config_.period_s;
+    rate_hz_ = static_cast<int>(1.0 / config_.period_s);
     timer_.start(mjlib::base::ConvertSecondsToDuration(period_s_),
                  std::bind(&Impl::HandleTimer, this, pl::_1));
 
@@ -600,6 +601,10 @@ class HoverbotControl::Impl {
         DoControl_Joint();
         break;
       }
+      case HM::kPitch: {
+        DoControl_Pitch();
+        break;
+      }
       case HM::kDrive: {
         DoControl_Drive();
         break;
@@ -638,8 +643,10 @@ class HoverbotControl::Impl {
         status_.mode = current_command_.mode;
         break;
       }
+      case HM::kPitch:
       case HM::kDrive: {
-        // TODO!
+        // TODO!  Optionally enforce a "stand up" phase.
+        status_.mode = current_command_.mode;
         break;
       }
     }
@@ -652,7 +659,13 @@ class HoverbotControl::Impl {
         case HM::kStopped:
         case HM::kFault:
         case HM::kZeroVelocity:
-        case HM::kJoint:
+        case HM::kJoint: {
+          status_.state.pitch.pitch_pid.Clear();
+          status_.state.pitch.yaw_pid.Clear();
+          status_.state.pitch.yaw_target = imu_data_.euler_deg.yaw;
+          break;
+        }
+        case HM::kPitch:
         case HM::kDrive:
         case HM::kNumModes: {
           break;
@@ -739,8 +752,49 @@ class HoverbotControl::Impl {
     ControlJoints(current_command_.joints);
   }
 
+  void ControlPitch(const HC::Pitch& pitch) {
+    control_log_->pitch = pitch;
+
+    const auto pitch_torque_Nm =
+        pitch_pid_.Apply(imu_data_.euler_deg.pitch, pitch.pitch_deg,
+                         imu_data_.rate_dps.y(), pitch.pitch_rate_dps,
+                         rate_hz_);
+
+    status_.state.pitch.yaw_target += pitch.yaw_rate_dps * period_s_;
+    const auto yaw_torque_Nm =
+        yaw_pid_.Apply(imu_data_.euler_deg.yaw, status_.state.pitch.yaw_target,
+                       imu_data_.rate_dps.z(), pitch.yaw_rate_dps,
+                       rate_hz_);
+
+    control_log_->pitch_torque_Nm = pitch_torque_Nm;
+    control_log_->yaw_torque_Nm = yaw_torque_Nm;
+
+    std::vector<HC::Joint> joints;
+    for (int id : {1, 2}) {
+      HC::Joint joint;
+      joint.id = id;
+      joint.power = true;
+      const double yaw_sign = id == 1 ? -1 : 1;
+      joint.torque_Nm = pitch_torque_Nm + yaw_sign * yaw_torque_Nm;
+      joint.kp_scale = 0.0;
+      joint.kd_scale = 0.0;
+      joints.push_back(joint);
+    }
+
+    ControlJoints(std::move(joints));
+  }
+
+  void DoControl_Pitch() {
+    ControlPitch(current_command_.pitch);
+  }
+
+  void ControlDrive(const HC::Drive& drive) {
+    HC::Pitch pitch;
+    ControlPitch(pitch);
+  }
+
   void DoControl_Drive() {
-    DoControl_Joint();
+    ControlDrive(current_command_.drive);
   }
 
   void ControlJoints(std::vector<HC::Joint> joints) {
@@ -921,6 +975,7 @@ class HoverbotControl::Impl {
   ControlLog* old_control_log_ = &control_logs_[1];
 
   double period_s_ = 0.0;
+  int rate_hz_ = 1;
   mjlib::io::RepeatingTimer timer_;
   using Client = mjlib::multiplex::AsioClient;
 
@@ -952,6 +1007,14 @@ class HoverbotControl::Impl {
   std::vector<moteus::Value> values_cache_;
 
   boost::posix_time::ptime last_warn_timestamp_;
+
+
+  mjlib::base::PID pitch_pid_{
+    &config_.pitch.pitch_pid, &status_.state.pitch.pitch_pid};
+  mjlib::base::PID yaw_pid_{
+    &config_.pitch.yaw_pid, &status_.state.pitch.yaw_pid};
+
+
 };
 
 HoverbotControl::HoverbotControl(base::Context& context,

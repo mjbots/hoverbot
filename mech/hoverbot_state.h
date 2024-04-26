@@ -16,6 +16,7 @@
 
 #include <optional>
 
+#include "mjlib/base/pid.h"
 #include "mjlib/base/visitor.h"
 
 #include "base/kinematic_relation.h"
@@ -69,6 +70,21 @@ struct HoverbotState {
 
   std::vector<Joint> joints;
 
+  struct Pitch {
+    mjlib::base::PID::State pitch_pid;
+    mjlib::base::PID::State yaw_pid;
+    double yaw_target = 0.0;
+
+    template <typename Archive>
+    void Serialize(Archive* a) {
+      a->Visit(MJ_NVP(pitch_pid));
+      a->Visit(MJ_NVP(yaw_pid));
+      a->Visit(MJ_NVP(yaw_target));
+    }
+  };
+
+  Pitch pitch;
+
   // And finally, the robot level.
   struct Robot {
     double voltage = 0.0;
@@ -84,6 +100,7 @@ struct HoverbotState {
   template <typename Archive>
   void Serialize(Archive* a) {
     a->Visit(MJ_NVP(joints));
+    a->Visit(MJ_NVP(pitch));
     a->Visit(MJ_NVP(robot));
   }
 };

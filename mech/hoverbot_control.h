@@ -96,11 +96,18 @@ class HoverbotControl : boost::noncopyable {
     boost::posix_time::ptime timestamp;
 
     std::vector<HC::Joint> joints;
+    HC::Pitch pitch;
+
+    double pitch_torque_Nm = 0.0;
+    double yaw_torque_Nm = 0.0;
 
     template <typename Archive>
     void Serialize(Archive* a) {
       a->Visit(MJ_NVP(timestamp));
       a->Visit(MJ_NVP(joints));
+      a->Visit(MJ_NVP(pitch));
+      a->Visit(MJ_NVP(pitch_torque_Nm));
+      a->Visit(MJ_NVP(yaw_torque_Nm));
     }
   };
 

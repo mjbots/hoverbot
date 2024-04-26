@@ -277,7 +277,7 @@ class Application {
   }
 
   getMaxReverseSpeed() {
-    return -0.5;
+    return -this.getMaxForwardSpeed();
   }
 
   start() {
@@ -482,6 +482,7 @@ class Application {
           if (this._mode == "off") { return "stopped"; }
           if (this._mode == "stop") { return "zero_velocity" ;}
 
+          if (this._mode == "pitch") { return "pitch"; }
           if (this._mode == "drive") { return "drive"; }
           return "zero_velocity";
         })(),
@@ -493,8 +494,13 @@ class Application {
     // every time.
     command["command"]["log"] = record_data ? "enable" : "disable";
 
-    command["command"]["v_R"] = v_R;
-    command["command"]["w_R"] = w_R;
+    if (this._mode == "pitch") {
+      command["command"]["pitch"] = {
+        "pitch_deg" : v_R[0] * 20.0,
+        "pitch_rate_dps" : 0.0,
+        "yaw_rate_dps" : (w_R[2] / Math.PI * 180.0),
+      }
+    }
 
     const command_string = JSON.stringify(command);
     getElement('current_json_command').innerHTML = command_string;
@@ -527,6 +533,7 @@ class Application {
         const cur = this._state.mode;
         if (cur == "stopped") { return "off"; }
         if (cur == "zero_velocity") { return "stop"; }
+        if (cur == "pitch") { return "pitch" };
         if (cur == "drive") { return "drive" };
         return "stop";
       })();
@@ -547,6 +554,7 @@ class Application {
         const cur = this._state.mode;
         if (cur == "stopped") { return "power off"; }
         if (cur == "zero_velocity") { return "damped"; }
+        if (cur == "pitch") { return "pitch"; }
         if (cur == "drive") { return "drive"; }
         return cur;
       })() + ')';

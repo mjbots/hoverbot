@@ -64,8 +64,11 @@ struct HoverbotCommand {
     // position, velocity, and torque.
     kJoint = 4,
 
+    // Maintain a fixed pitch and yaw torque.
+    kPitch = 5,
+
     // Drive at a fixed velocity and yaw rate.
-    kDrive = 5,
+    kDrive = 6,
 
     kNumModes,
   };
@@ -102,12 +105,42 @@ struct HoverbotCommand {
   // Only valid for kJoint mode.
   std::vector<Joint> joints;
 
+  struct Pitch {
+    double pitch_deg = 0.0;
+    double pitch_rate_dps = 0.0;
+    double yaw_rate_dps = 0.0;
+
+    template <typename Archive>
+    void Serialize(Archive* a) {
+      a->Visit(MJ_NVP(pitch_deg));
+      a->Visit(MJ_NVP(pitch_rate_dps));
+      a->Visit(MJ_NVP(yaw_rate_dps));
+    }
+  };
+
+  Pitch pitch;
+
+  struct Drive {
+    double velocity_mps = 0.0;
+    double yaw_rate_dps = 0.0;
+
+    template <typename Archive>
+    void Serialize(Archive* a) {
+      a->Visit(MJ_NVP(velocity_mps));
+      a->Visit(MJ_NVP(yaw_rate_dps));
+    }
+  };
+
+  Drive drive;
+
   template <typename Archive>
   void Serialize(Archive* a) {
     a->Visit(MJ_NVP(priority));
     a->Visit(MJ_NVP(log));
     a->Visit(MJ_NVP(mode));
     a->Visit(MJ_NVP(joints));
+    a->Visit(MJ_NVP(pitch));
+    a->Visit(MJ_NVP(drive));
   }
 };
 
@@ -129,6 +162,7 @@ struct IsEnum<mjmech::mech::HoverbotCommand::Mode> {
         { M::kFault, "fault" },
         { M::kZeroVelocity, "zero_velocity" },
         { M::kJoint, "joint" },
+        { M::kPitch, "pitch" },
         { M::kDrive, "drive" },
       }};
   }

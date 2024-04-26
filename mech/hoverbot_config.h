@@ -16,6 +16,7 @@
 
 #include <vector>
 
+#include "mjlib/base/pid.h"
 #include "mjlib/base/visitor.h"
 
 #include "base/point3d.h"
@@ -45,6 +46,19 @@ struct HoverbotConfig {
 
   std::vector<Joint> joints;
 
+  struct Pitch {
+    mjlib::base::PID::Config pitch_pid;
+    mjlib::base::PID::Config yaw_pid;
+
+    template <typename Archive>
+    void Serialize(Archive* a) {
+      a->Visit(MJ_NVP(pitch_pid));
+      a->Visit(MJ_NVP(yaw_pid));
+    }
+  };
+
+  Pitch pitch;
+
   double voltage_filter_s = 1.0;
 
   template <typename Archive>
@@ -52,6 +66,7 @@ struct HoverbotConfig {
     a->Visit(MJ_NVP(period_s));
     a->Visit(MJ_NVP(min_voltage));
     a->Visit(MJ_NVP(joints));
+    a->Visit(MJ_NVP(pitch));
     a->Visit(MJ_NVP(voltage_filter_s));
   }
 };
