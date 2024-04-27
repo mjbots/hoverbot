@@ -87,6 +87,8 @@ struct HoverbotConfig {
 
   Drive drive;
 
+  double max_tip_deg = 65;
+  double tip_filter_s = 0.1;
   double voltage_filter_s = 1.0;
 
   template <typename Archive>
@@ -98,6 +100,8 @@ struct HoverbotConfig {
     a->Visit(MJ_NVP(stand_up));
     a->Visit(MJ_NVP(pitch));
     a->Visit(MJ_NVP(drive));
+    a->Visit(MJ_NVP(max_tip_deg));
+    a->Visit(MJ_NVP(tip_filter_s));
     a->Visit(MJ_NVP(voltage_filter_s));
   }
 };

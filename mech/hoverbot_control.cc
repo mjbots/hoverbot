@@ -293,6 +293,16 @@ class HoverbotControl::Impl {
 
     imu_signal_(&imu_data_);
 
+    {
+      const double alpha =
+          std::pow(0.5, config_.period_s / config_.tip_filter_s);
+      auto& pitch = status_.state.robot.tip_pitch_deg;
+      pitch = alpha * pitch + (1.0 - alpha) * imu_data_.euler_deg.pitch;
+
+      auto& roll = status_.state.robot.tip_roll_deg;
+      roll = alpha * roll + (1.0 - alpha) * imu_data_.euler_deg.roll;
+    }
+
     // If we don't have all servos, then skip this cycle.
     const uint16_t servo_bitmask = [&]() {
       uint16_t result = 0;
@@ -343,8 +353,8 @@ class HoverbotControl::Impl {
 
     timing_.finish_status();
 
-    if ((std::abs(imu_data_.euler_deg.roll) > 60 ||
-         std::abs(imu_data_.euler_deg.pitch) > 60) &&
+    if ((std::abs(status_.state.robot.tip_roll_deg) > config_.max_tip_deg ||
+         std::abs(status_.state.robot.tip_pitch_deg) > config_.max_tip_deg) &&
         status_.state.robot.in_control_time_s > 5.0) {
       if (status_.mode != HM::kFault) {
         Fault("Tipping over");

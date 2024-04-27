@@ -113,6 +113,8 @@ struct HoverbotState {
     double accel_mps2 = 0.0;
     double voltage = 0.0;
     double in_control_time_s = 0.0;
+    double tip_pitch_deg = 0.0;
+    double tip_roll_deg = 0.0;
 
     template <typename Archive>
     void Serialize(Archive* a) {
@@ -120,6 +122,8 @@ struct HoverbotState {
       a->Visit(MJ_NVP(accel_mps2));
       a->Visit(MJ_NVP(voltage));
       a->Visit(MJ_NVP(in_control_time_s));
+      a->Visit(MJ_NVP(tip_pitch_deg));
+      a->Visit(MJ_NVP(tip_roll_deg));
     }
   };
 
