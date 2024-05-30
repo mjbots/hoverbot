@@ -6,6 +6,7 @@ interfaces, and utilities for developing and operating it.
 
 * GitHub https://github.com/mjbots/hoverbot
 * Most files are free hardware and software: Apache 2.0 License
+* F360 assembly: https://a360.co/4bEdIkS
 
 Directory structure
 -------------------
