@@ -22,3 +22,5 @@ _bazelrc_generated
 /bazel-*
 imgui.ini
 tplot2.ini
+*-backups/
+fp-info-cache
