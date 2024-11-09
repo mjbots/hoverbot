@@ -6,7 +6,7 @@
   * [Chassis cover](hw/hoverbot_chassis_cover.3mf)
   * [Base cover, battery rails, and battery cover](hw/hoverbot_rails_base_cover.3mf)
 * Electronics
-  * 2x [moteus-c1](https://mbjots.com/products/moteus-c1)
+  * 2x [moteus-c1](https://mjbots.com/products/moteus-c1)
   * [pi3hat](https://mjbots.com/products/mjbots-pi3hat-r4-5)
   * [power_dist](https://mjbots.com/products/mjbots-power-dist-r4-5b)
   * [Raspberry Pi 4 / 2GB](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/)
